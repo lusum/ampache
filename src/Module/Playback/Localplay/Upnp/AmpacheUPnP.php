@@ -235,6 +235,17 @@ class AmpacheUPnP extends localplay_controller
      */
     public function add_url(Stream_Url $url): bool
     {
+
+        //compatibility with jukebox mode
+        $url_data = $this->parse_url($url->url);
+        $oid      = array_key_exists('oid', $url_data) ? $url_data['oid'] : '';
+        if( $oid ) {
+            $song     = new Song($oid);
+            if ($song->title) {
+                $url->title  = $song->title;
+            }
+        }
+
         debug_event('upnp.controller', 'add_url: ' . $url->title . " | " . $url->url, 5);
 
         if (!$this->_upnp) {
@@ -329,7 +340,8 @@ class AmpacheUPnP extends localplay_controller
             return false;
         }
 
-        $this->_upnp->Skip($pos);
+        //compatibility with jukebox mode
+        $this->_upnp->Skip($pos+1);
 
         return true;
     }
@@ -463,7 +475,8 @@ class AmpacheUPnP extends localplay_controller
         foreach ($playlist as $key => $item) {
             $data          = array();
             $data['link']  = $item['link'] ?? '';
-            $data['id']    = $idx;
+            //compliance to the localplay api and jukebox mode
+            $data['id']    = $idx-1;
             $data['track'] = $idx;
 
             $url_data = Stream_Url::parse($data['link']);
@@ -480,7 +493,6 @@ class AmpacheUPnP extends localplay_controller
             $results[] = $data;
             $idx++;
         }
-
         return $results;
     }
 
@@ -503,10 +515,13 @@ class AmpacheUPnP extends localplay_controller
         $array['volume']      = $this->_upnp->GetVolume();
         $array['repeat']      = false;
         $array['random']      = false;
-        $array['track']       = $item['link'] ?? '';
+        //api compliance
+        $array['track']       = $this->_upnp->GetCurrentPos()+1;
         $array['track_title'] = $item['name'] ?? '';
 
-        $url_data = Stream_Url::parse($array['track']);
+        $link_data       = $item['link'] ?? '';
+
+        $url_data = Stream_Url::parse($link_data);
         if (array_key_exists('id', $url_data)) {
             $song = new Song($url_data['id']);
             if ($song->isNew() === false) {

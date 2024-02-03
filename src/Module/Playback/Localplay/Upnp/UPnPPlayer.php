@@ -147,6 +147,14 @@ class UPnPPlayer
     }
 
     /**
+     * @return integer
+     */
+    public function GetCurrentPos(): int
+    {
+        return $this->Playlist()->CurrentPos();
+    }
+
+    /**
      * GetState
      *
      * @return SimpleXMLElement|string
